@@ -7,12 +7,14 @@ from main_app import views
 
 router = routers.DefaultRouter()
 router.register(r'users', views.UserViewSet)
+router.register(r'categories', views.CategoryViewSet)
+router.register(r'transactions', views.TransactionViewSet, basename='transaction')
 
 urlpatterns = [
     path('', include(router.urls)),
     path('auth/', include('main_app.urls')),
     path('admin/', admin.site.urls),
-    path('profile/<int:pk>/', views.UserProfileView.as_view(), name='user-profile'),
+    path('profile/', views.UserProfileView.as_view(), name='user-profile'),
 
 
     # API Schema:

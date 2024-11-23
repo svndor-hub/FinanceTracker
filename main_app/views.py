@@ -1,39 +1,85 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.utils.dateparse import parse_date
 from rest_framework import permissions, viewsets, generics
 
-from main_app.serializers import UserSerializer, UserProfileSerializer
+from main_app.models import Category, Transaction
+from main_app.serializers import UserSerializer, UserProfileSerializer, UserRegistrationSerializer, CategorySerializer, \
+    TransactionSerializer
 
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.authentication import TokenAuthentication
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    serializer_class = CategorySerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Category.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class TransactionViewSet(viewsets.ModelViewSet):
+    serializer_class = TransactionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Transaction.objects.filter(user=self.request.user)
+
+        category = self.request.query_params.get('category')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+
+        # Optional filtering
+        if category:
+            queryset = queryset.filter(category_id=category)
+        if start_date:
+            queryset = queryset.filter(date__gte=parse_date(start_date))
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class RegistrationView(generics.CreateAPIView):
-    serializer_class = UserSerializer
+    serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
 
 
 class UserLoginView(APIView):
-    authentication_classes = [TokenAuthentication]
-    serializer_class = UserSerializer
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        user = authenticate(username=request.data['username'], password=request.data['password'])
+        username = self.request.get('username')
+        password = self.request.get('password')
+        if not username or not password:
+            return Response({'error': 'Username and password required'}, status=400)
+
+        user = authenticate(username=username, password=password)
         if user is not None:
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key})
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key}, status=200)
         else:
             return Response({'error': 'Invalid credentials'}, status=401)
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        # Ensure the user only accesses their own profile
+        return self.request.user.userprofile
