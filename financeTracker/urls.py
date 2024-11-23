@@ -7,8 +7,10 @@ from main_app import views
 
 router = routers.DefaultRouter()
 router.register(r'users', views.UserViewSet)
-router.register(r'categories', views.CategoryViewSet)
+router.register(r'categories', views.CategoryViewSet, basename='category')
 router.register(r'transactions', views.TransactionViewSet, basename='transaction')
+router.register(r'budgets', views.BudgetViewSet, basename='budget')
+router.register(r'notifications', views.NotificationViewSet, basename='notification')
 
 urlpatterns = [
     path('', include(router.urls)),
