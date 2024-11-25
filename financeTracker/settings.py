@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'main_app.apps.MainAppConfig',
     'rest_framework',
     'rest_framework.authtoken',
-    'drf_spectacular'
+    'drf_spectacular',
+    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
@@ -144,3 +145,8 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True
     # OTHER SETTINGS
 }
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # URL of Redis broker
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
